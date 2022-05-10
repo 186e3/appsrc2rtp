@@ -22,7 +22,7 @@ cb_need_data(GstElement *appsrc,
     guint size;
     GstFlowReturn ret;
 
-    size = 385 * 288 * 2;
+    size = 384 * 288 * 2;
 
     buffer = gst_buffer_new_allocate(NULL, size, NULL);
 
