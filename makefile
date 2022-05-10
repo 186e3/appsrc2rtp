@@ -1,8 +1,8 @@
 CC = gcc
 
 # gstreamer-1.0 gstreamer-app-1.0 glib-2.0 gobject-2.0
-STUFF = $(shell pkg-config --cflags gstreamer-1.0 gstreamer-app-1.0 glib-2.0 gobject-2.0) -D_GNU_SOURCE
-STUFF_LIBS = $(shell pkg-config --libs gstreamer-1.0 gstreamer-app-1.0 glib-2.0 gobject-2.0)
+STUFF = $(shell pkg-config --cflags gstreamer-1.0 gstreamer-app-1.0 glib-2.0 gobject-2.0 gdk-pixbuf-2.0) -D_GNU_SOURCE
+STUFF_LIBS = $(shell pkg-config --libs gstreamer-1.0 gstreamer-app-1.0 glib-2.0 gobject-2.0 gdk-pixbuf-2.0)
 OPTS = -Wall -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wunused #-Werror #-O2
 GDB = -g -ggdb
 OBJS = src/appsrc2rtp.o
