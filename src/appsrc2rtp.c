@@ -38,9 +38,11 @@ cb_need_data(GstElement *appsrc,
 
     g_signal_emit_by_name(appsrc, "push-buffer", buffer, &ret);
     gst_buffer_unref(buffer);
-
+    printf("push\n");
     if (ret != GST_FLOW_OK)
     {
+        printf("fail\n");
+
         /* something wrong, stop pushing */
         g_main_loop_quit(loop);
     }
@@ -51,21 +53,28 @@ gint main(gint argc,
 {
     GstElement *pipeline, *appsrc;
     GstCaps *caps;
-
-
+    char *p;
 
     /* init GStreamer */
     gst_init(&argc, &argv);
     loop = g_main_loop_new(NULL, FALSE);
 
 #if 1
-    pipeline = gst_parse_launch("appsrc name=mysource ! video/x-raw,width=384,height=288,bpp=24,depth=16 ! ffmpegcolorspace ! videoscale method=1 ! theoraenc bitrate=150 ! udpsink host=127.0.0.1 port=1234", NULL);
+
+    p = "videotestsrc ! \
+    video/x-raw,width=320,height=240,framerate=15/1 ! \
+    videoscale ! videorate ! videoconvert ! timeoverlay ! \
+    vp8enc error-resilient=1 ! \
+      rtpvp8pay ! udpsink host=127.0.0.1 port=5004";
+
+    // p = "appsrc name=mysource ! video/x-raw,width=384,height=288,bpp=24,depth=16 ! x264enc ! rtph264pay ! udpsink host=127.0.0.1 port=1234";
+    pipeline = gst_parse_launch(p, NULL);
     g_assert(pipeline);
 
+#if 0
     appsrc = gst_bin_get_by_name(GST_BIN(pipeline), "mysource");
     g_assert(appsrc);
     g_assert(GST_IS_APP_SRC(appsrc));
-
 
     /* set the caps on the source */
     caps = gst_caps_new_simple("video/x-raw-rgb",
@@ -73,8 +82,10 @@ gint main(gint argc,
                                "depth", G_TYPE_INT, 16,
                                "width", G_TYPE_INT, 384,
                                "height", G_TYPE_INT, 288,
+                               "framerate", GST_TYPE_FRACTION, 25, 1,
                                NULL);
     gst_app_src_set_caps(GST_APP_SRC(appsrc), caps);
+#endif
 #endif
 
 #if 0
@@ -97,15 +108,16 @@ gint main(gint argc,
     gst_element_link_many(appsrc, conv, videosink, NULL);
 #endif
 
+#if 0
     /* setup appsrc */
     g_object_set(G_OBJECT(appsrc),
                  "stream-type", 0,
                  "format", GST_FORMAT_TIME, NULL);
     g_signal_connect(appsrc, "need-data", G_CALLBACK(cb_need_data), NULL);
-
-        printf("playing\n");
+#endif
 
     /* play */
+    printf("playing\n");
     gst_element_set_state(pipeline, GST_STATE_PLAYING);
     g_main_loop_run(loop);
 
