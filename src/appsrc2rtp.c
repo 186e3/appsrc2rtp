@@ -32,7 +32,8 @@ cb_need_data(GstElement *appsrc,
     white = !white;
 
     GST_BUFFER_PTS(buffer) = timestamp;
-    GST_BUFFER_DURATION(buffer) = gst_util_uint64_scale_int(1, GST_SECOND, 2);
+    //  GST_BUFFER_DURATION(buffer) = gst_util_uint64_scale_int(1, GST_SECOND, 2); //half second
+    GST_BUFFER_DURATION(buffer) = gst_util_uint64_scale_int(1, GST_SECOND, 15); // fifteenth
 
     timestamp += GST_BUFFER_DURATION(buffer);
 
@@ -59,34 +60,41 @@ gint main(gint argc,
     gst_init(&argc, &argv);
     loop = g_main_loop_new(NULL, FALSE);
 
-#if 1
+    // nope
+    p = "appsrc name=mysource ! video/x-raw,width=384,height=288,bpp=24,depth=16 ! x264enc ! rtph264pay ! udpsink host=127.0.0.1 port=1234";
 
+    // no appsrc testing
     p = "videotestsrc ! \
-    video/x-raw,width=320,height=240,framerate=15/1 ! \
-    videoscale ! videorate ! videoconvert ! timeoverlay ! \
-    vp8enc error-resilient=1 ! \
-      rtpvp8pay ! udpsink host=127.0.0.1 port=5004";
+video/x-raw,width=320,height=240,framerate=15/1 ! \
+videoscale ! videorate ! videoconvert ! timeoverlay ! \
+vp8enc error-resilient=1 ! \
+rtpvp8pay ! udpsink host=127.0.0.1 port=5004";
 
-    // p = "appsrc name=mysource ! video/x-raw,width=384,height=288,bpp=24,depth=16 ! x264enc ! rtph264pay ! udpsink host=127.0.0.1 port=1234";
+    p = "appsrc name=mysource ! \
+video/x-raw,width=384,height=288,bpp=16,depth=16,framerate=15/1 ! ";
+
+    p = "appsrc name=mysource ! \
+video/x-raw,width=384,height=288,bpp=16,depth=16,framerate=15/1 ! \
+videorate ! videoconvert ! timeoverlay ! \
+vp8enc error-resilient=1 ! \
+rtpvp8pay ! udpsink host=127.0.0.1 port=5004";
+
     pipeline = gst_parse_launch(p, NULL);
     g_assert(pipeline);
 
-#if 0
     appsrc = gst_bin_get_by_name(GST_BIN(pipeline), "mysource");
     g_assert(appsrc);
     g_assert(GST_IS_APP_SRC(appsrc));
 
     /* set the caps on the source */
-    caps = gst_caps_new_simple("video/x-raw-rgb",
+    caps = gst_caps_new_simple("video/x-raw",
                                "bpp", G_TYPE_INT, 16,
                                "depth", G_TYPE_INT, 16,
                                "width", G_TYPE_INT, 384,
                                "height", G_TYPE_INT, 288,
-                               "framerate", GST_TYPE_FRACTION, 25, 1,
+                               "framerate", GST_TYPE_FRACTION, 15, 1,
                                NULL);
     gst_app_src_set_caps(GST_APP_SRC(appsrc), caps);
-#endif
-#endif
 
 #if 0
     /* setup pipeline */
@@ -108,13 +116,11 @@ gint main(gint argc,
     gst_element_link_many(appsrc, conv, videosink, NULL);
 #endif
 
-#if 0
     /* setup appsrc */
     g_object_set(G_OBJECT(appsrc),
                  "stream-type", 0,
                  "format", GST_FORMAT_TIME, NULL);
     g_signal_connect(appsrc, "need-data", G_CALLBACK(cb_need_data), NULL);
-#endif
 
     /* play */
     printf("playing\n");
