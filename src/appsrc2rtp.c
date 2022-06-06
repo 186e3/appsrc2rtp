@@ -12,6 +12,7 @@
 #include <pthread.h>
 #include <time.h>
 #include <errno.h>
+#include <unistd.h>
 
 static GMainLoop *loop;
 
@@ -41,15 +42,34 @@ cb_need_data(GstElement *appsrc,
 
     timestamp += GST_BUFFER_DURATION(buffer);
 
-    g_signal_emit_by_name(appsrc, "push-buffer", buffer, &ret);
-    gst_buffer_unref(buffer);
     printf("push\n");
+#if 1
+    g_signal_emit_by_name(appsrc, "push-buffer", buffer, &ret);
+    gst_buffer_unref(buffer); // original example included unref call
+#else
+    // this is an alternative, but not sure why would need this approach
+    ret = gst_app_src_push_buffer((GstAppSrc *)appsrc, buffer);
+    // this seems to work better without unref call
+#endif
+
     if (ret != GST_FLOW_OK)
     {
         printf("fail\n");
 
         /* something wrong, stop pushing */
         g_main_loop_quit(loop);
+    }
+}
+
+void *thread2(void *p);
+void *thread2(void *p)
+{
+    while (1)
+    {
+        printf("tick\n");
+        cb_need_data(p, 0, 0);
+        // gst_webrtc_data_channel_send_string(p, "xx");
+        sleep(1);
     }
 }
 
@@ -130,7 +150,10 @@ rtpvp8pay pt=96 ssrc=2 ! queue ! application/x-rtp,media=video,encoding-name=VP8
     g_object_set(G_OBJECT(appsrc),
                  "stream-type", 0,
                  "format", GST_FORMAT_TIME, NULL);
-    g_signal_connect(appsrc, "need-data", G_CALLBACK(cb_need_data), NULL);
+    //  g_signal_connect(appsrc, "need-data", G_CALLBACK(cb_need_data), NULL);
+
+    pthread_t id;
+    pthread_create(&id, NULL, thread2, appsrc);
 
     /* play */
     printf("playing\n");
