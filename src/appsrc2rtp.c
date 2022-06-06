@@ -9,6 +9,10 @@
 #include <gst/gst.h>
 #include <gst/app/gstappsrc.h>
 
+#include <pthread.h>
+#include <time.h>
+#include <errno.h>
+
 static GMainLoop *loop;
 
 static void

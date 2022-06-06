@@ -13,7 +13,7 @@ all: appsrc2rtp
 	$(CC) $(ASAN) $(STUFF) -fPIC $(GDB) -c $< -o $@ $(OPTS)
 
 appsrc2rtp: $(OBJS)
-	$(CC) $(GDB) -o appsrc2rtp $(OBJS) $(ASAN_LIBS) $(STUFF_LIBS)
+	$(CC) $(GDB) -o appsrc2rtp -pthread $(OBJS) $(ASAN_LIBS) $(STUFF_LIBS)
 
 clean:
 	rm -f appsrc2rtp src/*.o
