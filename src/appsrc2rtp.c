@@ -14,7 +14,33 @@
 #include <errno.h>
 #include <unistd.h>
 
+//socket stuff
+// inspired by https://www.cs.cmu.edu/afs/cs/academic/class/15213-f99/www/class26/udpclient.c
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netdb.h>
+
+//#define BUFSIZE 2000
+
 static GMainLoop *loop;
+
+int sockfd;                    // globals are cool
+struct sockaddr_in serveraddr; // more globals are even more cool
+
+/*
+ * error - wrapper for perror
+ */
+void error(char *msg);
+void error(char *msg)
+{
+    perror(msg);
+    exit(0);
+}
 
 static void
 cb_need_data(GstElement *appsrc,
@@ -61,14 +87,20 @@ cb_need_data(GstElement *appsrc,
     }
 }
 
-void *thread2(void *p);
-void *thread2(void *p)
+void *frame_thread(void *p);
+void *frame_thread(void *p)
 {
     while (1)
     {
-        printf("tick\n");
+        printf("push frame, dchan\n");
         cb_need_data(p, 0, 0);
         // gst_webrtc_data_channel_send_string(p, "xx");
+
+        socklen_t serverlen = sizeof(serveraddr);
+        ssize_t n = sendto(sockfd, "wow", strlen("wow"), 0, &serveraddr, serverlen);
+        if (n < 0)
+            error("ERROR in sendto");
+
         sleep(1);
     }
 }
@@ -76,6 +108,60 @@ void *thread2(void *p)
 gint main(gint argc,
           gchar *argv[])
 {
+
+
+    
+    // int serverlen;
+
+    struct hostent *server;
+    char *hostname = "127.0.0.1";
+    int portno = 5007;
+
+    /* check command line arguments */
+    if (argc == 3)
+    {
+        // fprintf(stderr, "usage: %s <hostname> <port>\n", argv[0]);
+        // exit(0);
+        hostname = argv[1];
+        portno = atoi(argv[2]);
+    }
+    fprintf(stdout, "network  <hostname>:%s <port>:%d\n", hostname, portno);
+    // exit(0);
+
+    /* socket: create the socket */
+    sockfd = socket(AF_INET, SOCK_DGRAM, 0);
+    if (sockfd < 0)
+        error("ERROR opening socket");
+
+    /* gethostbyname: get the server's DNS entry */
+    server = gethostbyname(hostname);
+    if (server == NULL)
+    {
+        fprintf(stderr, "ERROR, no such host as %s\n", hostname);
+        exit(0);
+    }
+
+    /* build the server's Internet address */
+    bzero((char *)&serveraddr, sizeof(serveraddr));
+    serveraddr.sin_family = AF_INET;
+    bcopy((char *)server->h_addr,
+          (char *)&serveraddr.sin_addr.s_addr, server->h_length);
+    serveraddr.sin_port = htons(portno);
+
+    /* get a message from the user */
+    // bzero(buf, BUFSIZE);
+    // printf("Please enter msg: ");
+    // fgets(buf, BUFSIZE, stdin);
+
+    /* send the message to the server */
+    // serverlen = sizeof(serveraddr);
+    // n = sendto(sockfd, "wow", strlen("wow"), 0, &serveraddr, serverlen);
+    // if (n < 0)
+    //     error("ERROR in sendto");
+
+    // end of networking
+    // start of GSTREAMER stuff
+
     GstElement *pipeline, *appsrc;
     GstCaps *caps;
     char *p;
@@ -153,7 +239,7 @@ rtpvp8pay pt=96 ssrc=2 ! queue ! application/x-rtp,media=video,encoding-name=VP8
     //  g_signal_connect(appsrc, "need-data", G_CALLBACK(cb_need_data), NULL);
 
     pthread_t id;
-    pthread_create(&id, NULL, thread2, appsrc);
+    pthread_create(&id, NULL, frame_thread, appsrc);
 
     /* play */
     printf("playing\n");
