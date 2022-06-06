@@ -77,7 +77,7 @@ video/x-raw,width=384,height=288,bpp=16,depth=16,framerate=15/1 ! ";
 video/x-raw,width=384,height=288,bpp=16,depth=16,framerate=15/1 ! \
 videorate ! videoconvert ! timeoverlay ! \
 vp8enc error-resilient=1 ! \
-rtpvp8pay ! udpsink host=127.0.0.1 port=5004";
+rtpvp8pay ! udpsink host=127.0.0.1 port=5006";
 
     pipeline = gst_parse_launch(p, NULL);
     g_assert(pipeline);
