@@ -14,8 +14,8 @@
 #include <errno.h>
 #include <unistd.h>
 
-//socket stuff
-// inspired by https://www.cs.cmu.edu/afs/cs/academic/class/15213-f99/www/class26/udpclient.c
+// socket stuff
+//  inspired by https://www.cs.cmu.edu/afs/cs/academic/class/15213-f99/www/class26/udpclient.c
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -26,6 +26,9 @@
 #include <netdb.h>
 
 //#define BUFSIZE 2000
+
+int width = 384;
+int height = 288;
 
 static GMainLoop *loop;
 
@@ -53,11 +56,12 @@ cb_need_data(GstElement *appsrc,
     guint size;
     GstFlowReturn ret;
 
-    size = 384 * 288 * 2;
+    size = width * height * 2;
 
     buffer = gst_buffer_new_allocate(NULL, size, NULL);
 
     /* this makes the image black/white */
+
     gst_buffer_memset(buffer, 0, white ? 0xff : 0x0, size);
 
     white = !white;
@@ -101,7 +105,8 @@ void *frame_thread(void *p)
         if (n < 0)
             error("ERROR in sendto");
 
-        sleep(1);
+        // sleep(1);
+        usleep((useconds_t)(500 * 1000));
     }
 }
 
@@ -109,8 +114,6 @@ gint main(gint argc,
           gchar *argv[])
 {
 
-
-    
     // int serverlen;
 
     struct hostent *server;
@@ -190,7 +193,6 @@ vp8enc error-resilient=1 ! \
 rtpvp8pay ! udpsink host=127.0.0.1 port=5006";
 
     p = "appsrc name=mysource ! \
-video/x-raw,width=384,height=288,bpp=16,depth=16,framerate=15/1 ! \
 videorate ! videoconvert ! timeoverlay ! \
 vp8enc error-resilient=1 ! \
 rtpvp8pay pt=96 ssrc=2 ! queue ! application/x-rtp,media=video,encoding-name=VP8,payload=96 ! udpsink host=127.0.0.1 port=5006";
@@ -206,8 +208,8 @@ rtpvp8pay pt=96 ssrc=2 ! queue ! application/x-rtp,media=video,encoding-name=VP8
     caps = gst_caps_new_simple("video/x-raw",
                                "bpp", G_TYPE_INT, 16,
                                "depth", G_TYPE_INT, 16,
-                               "width", G_TYPE_INT, 384,
-                               "height", G_TYPE_INT, 288,
+                               "width", G_TYPE_INT, width,
+                               "height", G_TYPE_INT, height,
                                "framerate", GST_TYPE_FRACTION, 15, 1,
                                NULL);
     gst_app_src_set_caps(GST_APP_SRC(appsrc), caps);
