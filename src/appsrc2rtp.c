@@ -27,8 +27,8 @@
 
 //#define BUFSIZE 2000
 
-int width = 384;
-int height = 288;
+int width = 1280;
+int height = 720;
 
 static GMainLoop *loop;
 
@@ -89,19 +89,22 @@ cb_need_data(GstElement *appsrc,
     {
         ptr = (guint16 *)map.data;
         /* invert data */
-        for (int y = 0; y < 288; y++)
+        for (int y = 0; y < height; y++)
         {
-            for (int x = 0; x < 384; x++)
+            for (int x = 0; x < width; x++)
             {
-                I = 1664525 * I + 1013904223;
+                if (x%4==0){
+  I = 1664525 * I + 1013904223;
                 white = I <= 0x7FFFFFFF;
+                }
+              
 
                 // t = ptr[384 - 1 - x];
                 // ptr[384 - 1 - x] = ptr[x];
                 // ptr[x] = t;
                 ptr[x] = white ? 0xffff : 0x0;
             }
-            ptr += 384;
+            ptr += width;
         }
         gst_buffer_unmap(buffer, &map);
     }
@@ -253,7 +256,7 @@ rtpvp8pay pt=96 ssrc=2 ! queue ! application/x-rtp,media=video,encoding-name=VP8
                                "depth", G_TYPE_INT, 16,
                                "width", G_TYPE_INT, width,
                                "height", G_TYPE_INT, height,
-                               "framerate", GST_TYPE_FRACTION, 15, 1,
+                               "framerate", GST_TYPE_FRACTION, 30, 1,
                                NULL);
     gst_app_src_set_caps(GST_APP_SRC(appsrc), caps);
 
