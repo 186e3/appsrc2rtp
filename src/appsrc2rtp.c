@@ -27,8 +27,8 @@
 
 //#define BUFSIZE 2000
 
-int width = 384;
-int height = 288;
+int width = 1280;
+int height = 720;
 
 static GMainLoop *loop;
 
@@ -52,6 +52,7 @@ cb_need_data(GstElement *appsrc,
 {
     static gboolean white = FALSE;
     static GstClockTime timestamp = 0;
+    static uint32_t I = 0;
     GstBuffer *buffer;
     guint size;
     GstFlowReturn ret;
@@ -62,7 +63,19 @@ cb_need_data(GstElement *appsrc,
 
     /* this makes the image black/white */
 
-    gst_buffer_memset(buffer, 0, white ? 0xff : 0x0, size);
+    // gst_buffer_memset(buffer, 0, white ? 0xff : 0x0, size);
+
+    /* this makes the image black/white */
+    for (size_t i = 0; i < height; i++)
+    {
+        I = 1664525 * I + 1013904223;
+        white = I <= 0x7FFFFFFF;
+        // white = ((i + z) / 16) % 2;
+        gst_buffer_memset(buffer, i * width * 2, white ? 0xff : 0x0, width * 2);
+
+        // z++;
+        white = !white;
+    }
 
     white = !white;
 
@@ -106,7 +119,7 @@ void *frame_thread(void *p)
             error("ERROR in sendto");
 
         // sleep(1);
-        usleep((useconds_t)(500 * 1000));
+        usleep((useconds_t)(33 * 1000));
     }
 }
 
@@ -194,7 +207,7 @@ rtpvp8pay ! udpsink host=127.0.0.1 port=5006";
 
     p = "appsrc name=mysource ! \
 videorate ! videoconvert ! timeoverlay ! \
-vp8enc error-resilient=1 ! \
+vp8enc threads=6 deadline=2 error-resilient=1 ! \
 rtpvp8pay pt=96 ssrc=2 ! queue ! application/x-rtp,media=video,encoding-name=VP8,payload=96 ! udpsink host=127.0.0.1 port=5006";
 
     pipeline = gst_parse_launch(p, NULL);
@@ -207,6 +220,7 @@ rtpvp8pay pt=96 ssrc=2 ! queue ! application/x-rtp,media=video,encoding-name=VP8
     /* set the caps on the source */
     caps = gst_caps_new_simple("video/x-raw",
                                "bpp", G_TYPE_INT, 16,
+                               "format", G_TYPE_STRING, "RGB16",
                                "depth", G_TYPE_INT, 16,
                                "width", G_TYPE_INT, width,
                                "height", G_TYPE_INT, height,
