@@ -27,8 +27,8 @@
 
 //#define BUFSIZE 2000
 
-int width = 1280;
-int height = 720;
+int width = 384;
+int height = 288;
 
 static GMainLoop *loop;
 
@@ -66,15 +66,44 @@ cb_need_data(GstElement *appsrc,
     // gst_buffer_memset(buffer, 0, white ? 0xff : 0x0, size);
 
     /* this makes the image black/white */
-    for (size_t i = 0; i < height; i++)
-    {
-        I = 1664525 * I + 1013904223;
-        white = I <= 0x7FFFFFFF;
-        // white = ((i + z) / 16) % 2;
-        gst_buffer_memset(buffer, i * width * 2, white ? 0xff : 0x0, width * 2);
+    // for (size_t i = 0; i < height; i++)
+    // {
+    //     I = 1664525 * I + 1013904223;
+    //     white = I <= 0x7FFFFFFF;
+    //     // white = ((i + z) / 16) % 2;
+    //     gst_buffer_memset(buffer, i * width * 2, white ? 0xff : 0x0, width * 2);
+    //     for (size_t j= 0; j < width; j++)
+    //     {
+    //         buffer[i * width * 2 + j * 2] = white;
+    //         buffer[i * width * 2 + j * 2] = white;
+    //     }
 
-        // z++;
-        white = !white;
+    //     // z++;
+    //     white = !white;
+    // }
+
+    GstMapInfo map;
+    guint16 *ptr, t;
+
+    if (gst_buffer_map(buffer, &map, GST_MAP_WRITE))
+    {
+        ptr = (guint16 *)map.data;
+        /* invert data */
+        for (int y = 0; y < 288; y++)
+        {
+            for (int x = 0; x < 384; x++)
+            {
+                I = 1664525 * I + 1013904223;
+                white = I <= 0x7FFFFFFF;
+
+                // t = ptr[384 - 1 - x];
+                // ptr[384 - 1 - x] = ptr[x];
+                // ptr[x] = t;
+                ptr[x] = white ? 0xffff : 0x0;
+            }
+            ptr += 384;
+        }
+        gst_buffer_unmap(buffer, &map);
     }
 
     white = !white;
